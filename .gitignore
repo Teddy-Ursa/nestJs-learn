@@ -1,0 +1,56 @@
+# ENV
+/*.env
+/.env*
+/angular.proxy.js
+/keycloak.json
+
+# Compiled output
+/dist
+/out-tsc
+/bazel-out
+
+# Dependencies
+/node_modules
+
+# Profiling files
+chrome-profiler-events*.json
+speed-measure-plugin*.json
+
+# IDEs and editors
+/.idea
+/.vscode
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# Misc
+/.angular
+/temp
+/tmp
+/coverage
+/report
+/.sass-cache
+/connect.lock
+/test-results.xml
+/libpeerconnection.log
+/npm-debug.log
+/yarn-error.log
+/testem.log
+/typings
+/.stylelint.errors
+/.stylelintrp
+/.trivycache
+/.reports
+
+# System Files
+/.DS_Store
+/Thumbs.db

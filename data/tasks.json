@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "title": "Изучить запись JSON",
+    "completed": false
+  },
+  {
+    "id": 2,
+    "title": "Начать день 3",
+    "completed": true
+  },
+  {
+    "id": 1788429231343,
+    "title": "Изучить fs/promises",
+    "completed": false
+  }
+]
