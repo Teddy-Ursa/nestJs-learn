@@ -22,7 +22,7 @@ export async function loadTasks(): Promise<Task[]> {
 
         if (error instanceof SyntaxError) {
             throw new Error(
-                "Файл task.json содержит некорректный JSON",
+                "Файл tasks.json содержит некорректный JSON",
                 {cause: error}
             )
         }
