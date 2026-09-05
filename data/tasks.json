@@ -13,5 +13,10 @@
     "id": 1788429231343,
     "title": "Изучить fs/promises",
     "completed": false
+  },
+  {
+    "id": 1788604954422,
+    "title": "Изучить обработку ошибок",
+    "completed": false
   }
 ]

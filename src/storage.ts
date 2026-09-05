@@ -1,5 +1,6 @@
 import path from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { StorageError } from "./errors.js";
 import type {Task} from "./types.js";
 
 const dataDirectory = path.join(process.cwd(), "data");
@@ -21,13 +22,20 @@ export async function loadTasks(): Promise<Task[]> {
         }
 
         if (error instanceof SyntaxError) {
-            throw new Error(
+            if (error instanceof StorageError) {
+                console.error(error.name);
+                console.error(error.message);
+                console.error(error.cause);
+                process.exitCode = 1;
+            }
+            
+            throw new StorageError(
                 "Файл tasks.json содержит некорректный JSON",
-                {cause: error}
+                error
             )
         }
 
-        throw error;
+        throw new StorageError("Не удалось загрузить задачи", error);
     }
     
 }

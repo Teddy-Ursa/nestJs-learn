@@ -1,6 +1,7 @@
 import { getArgumentValue } from './arguments.js';
 import { createNewTask } from './createNewTask.js';
 import { saveTasks, loadTasks } from "./storage.js";
+import { StorageError, ValidationError } from "./errors.js";
 import type { Task } from "./types.js";
 
 async function main(): Promise<void> {
@@ -8,9 +9,7 @@ async function main(): Promise<void> {
     const title = getArgumentValue(args, "--title");
 
     if (title === undefined || title.trim() === "") {
-        console.error("Ошибка: передайте название через --title");
-        process.exitCode = 1;
-        return;
+       throw new ValidationError("Передайте название через --title");
     }
 
     let loadedTasks = await loadTasks();
@@ -18,8 +17,7 @@ async function main(): Promise<void> {
     const taskAlredyExists = loadedTasks.some(task => task.title.trim().toLowerCase() === normalizedTitle);
 
     if (taskAlredyExists) {
-        console.log("Такая задача уже существует!");
-        return;
+        throw new ValidationError(`Задача ${title.trim()} уже существует`);
     }
 
     const newTask = createNewTask(title);
@@ -31,7 +29,18 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : "Неизвестная ошибка";
-    console.error(`Ошибка: ${message}`);
+    if (error instanceof ValidationError) {
+        console.error(`Ошибка ввода: ${error.message}`);
+        process.exitCode = 2;
+        return;
+    }
+
+    if (error instanceof StorageError) {
+        console.error(`Ошибка хранилища: ${error.message}`);
+        process.exitCode = 3;
+        return;
+    }
+    
+    console.error("Непредвиденная ошибка:", error);
     process.exitCode = 1;
 });
