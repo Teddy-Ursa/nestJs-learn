@@ -1,31 +1,34 @@
-import { getArgumentValue } from './arguments.js';
-import { createNewTask } from './createNewTask.js';
-import { saveTasks, loadTasks } from "./storage.js";
+import { addTask } from "./commands/add-task.js";
+import { completeTask } from "./commands/complete-task.js";
+import { listTasks } from "./commands/list-tasks.js";
+import { removeTask } from "./commands/remove-task.js";
 import { StorageError, ValidationError } from "./errors.js";
-import type { Task } from "./types.js";
 
 async function main(): Promise<void> {
     const args = process.argv.slice(2);
-    const title = getArgumentValue(args, "--title");
+    const command = args[0];
+    const commandArgs = args.slice(1);
 
-    if (title === undefined || title.trim() === "") {
-       throw new ValidationError("Передайте название через --title");
+    switch (command) {
+        case "add":
+            await addTask(commandArgs);
+            return;
+
+        case "list":
+            await listTasks();
+            return;
+
+        case "done":
+            await completeTask(commandArgs);
+            return;
+        
+        case "remove":
+            await removeTask(commandArgs);
+            return;
+
+        default:
+            throw new ValidationError("Используйте комманду add, done, remove или list");    
     }
-
-    let loadedTasks = await loadTasks();
-    const normalizedTitle = title.trim().toLowerCase();
-    const taskAlredyExists = loadedTasks.some(task => task.title.trim().toLowerCase() === normalizedTitle);
-
-    if (taskAlredyExists) {
-        throw new ValidationError(`Задача ${title.trim()} уже существует`);
-    }
-
-    const newTask = createNewTask(title);
-    loadedTasks.push(newTask);
-    await saveTasks(loadedTasks);
-    
-    console.log(`Задача добавлена: ${newTask.title}`);
-    console.log(`Всего задач: ${loadedTasks.length}`);
 }
 
 main().catch((error: unknown) => {

@@ -2,7 +2,7 @@
   {
     "id": 1,
     "title": "Изучить запись JSON",
-    "completed": false
+    "completed": true
   },
   {
     "id": 2,
@@ -17,6 +17,11 @@
   {
     "id": 1788604954422,
     "title": "Изучить обработку ошибок",
+    "completed": false
+  },
+  {
+    "id": 1788719319119,
+    "title": "Собрать CLI",
     "completed": false
   }
 ]
