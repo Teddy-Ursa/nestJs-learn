@@ -2,6 +2,7 @@ import { addTask } from "./commands/add-task.js";
 import { completeTask } from "./commands/complete-task.js";
 import { listTasks } from "./commands/list-tasks.js";
 import { removeTask } from "./commands/remove-task.js";
+import { showStats } from "./commands/show-stats.js";
 import { StorageError, ValidationError } from "./errors.js";
 
 async function main(): Promise<void> {
@@ -26,8 +27,12 @@ async function main(): Promise<void> {
             await removeTask(commandArgs);
             return;
 
+        case "stats":
+            await showStats();
+            return;
+
         default:
-            throw new ValidationError("Используйте комманду add, done, remove или list");    
+            throw new ValidationError("Используйте комманду add, done, remove, stats или list");    
     }
 }
 
