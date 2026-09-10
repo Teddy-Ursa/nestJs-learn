@@ -1,8 +1,8 @@
 [
   {
     "id": 1,
-    "title": "Изучить запись JSON",
-    "completed": true
+    "title": "Изучить REST API",
+    "completed": false
   },
   {
     "id": 2,

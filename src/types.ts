@@ -7,3 +7,8 @@ export type Task = {
 export type CreateTaskBody = {
   title: string;
 };
+
+export type UpdateTaskBody = {
+  title?: string;
+  completed?: boolean;
+};

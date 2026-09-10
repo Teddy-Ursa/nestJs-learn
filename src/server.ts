@@ -2,8 +2,10 @@ import { loadTasks, saveTasks } from "./storage.js";
 import { createServer } from "node:http";
 import { ServerResponse, IncomingMessage } from "node:http";
 import type { CreateTaskBody } from "./types.js";
+import type { UpdateTaskBody } from "./types.js";
 import { error } from "node:console";
 import { createNewTask } from "./createNewTask.js";
+import { platform } from "node:os";
 
 function sendJson(response: ServerResponse, statusCode: number, data: unknown): void {
     const body = JSON.stringify(data);
@@ -69,7 +71,7 @@ const server = createServer( async (request, response) => {
             return;
         }
 
-        if (request.method === "POST" && url.pathname === "/tasks") {
+        if (method === "POST" && url.pathname === "/tasks") {
             const contentType = request.headers["content-type"];
             const mediaType = contentType
                 ?.split(";")[0]
@@ -96,38 +98,144 @@ const server = createServer( async (request, response) => {
                 throw error;
             }
 
-            try {
-                if (!isCreateTaskBody(body)) {
-                    sendJson(response, 400, {error: "title должен быть непустой строкой"});
-                    return;
-                }
-                
-                const cleanedTitle = body.title.trim();
-                const normalizedTitle = cleanedTitle.toLowerCase();
-                const tasks = await loadTasks();
-                const taskAlreadyExists = tasks.some((task) => task.title.trim().toLowerCase() === normalizedTitle);
-
-                if (taskAlreadyExists) {
-                    sendJson(response, 409, {error: "Задача уже существует"});
-                    return;
-                }
-
-                const newTask = createNewTask(cleanedTitle)
-                tasks.push(newTask);
-                await saveTasks(tasks);
-                sendJson(response, 201, newTask);
-            } catch (error: unknown) {
-                if (error instanceof SyntaxError) {
-                    sendJson(response, 400, {error: "Некорректный JSON"});
-                    return;
-                }
-
-                throw error;
+            if (!isCreateTaskBody(body)) {
+                sendJson(response, 400, {error: "title должен быть непустой строкой"});
+                return;
             }
+            
+            const cleanedTitle = body.title.trim();
+            const normalizedTitle = cleanedTitle.toLowerCase();
+            const tasks = await loadTasks();
+            const taskAlreadyExists = tasks.some((task) => task.title.trim().toLowerCase() === normalizedTitle);
+
+            if (taskAlreadyExists) {
+                sendJson(response, 409, {error: "Задача уже существует"});
+                return;
+            }
+
+            const newTask = createNewTask(cleanedTitle)
+            tasks.push(newTask);
+            await saveTasks(tasks);
+            sendJson(response, 201, newTask);
 
             return;
         }
-        
+
+        const taskIdText = getTaskIdText(url.pathname);
+
+        if (taskIdText !== undefined) {
+            if (method === "GET") {
+                const taskId = Number(taskIdText);
+
+                if (!Number.isSafeInteger(taskId) || taskId <= 0) {
+                    sendJson(response, 400, {error: "ID должен быть положительным целым числом"});
+                    return;
+                }
+
+                const tasks = await loadTasks();
+                const task = tasks.find(task => task.id === taskId);
+
+                if (task === undefined) {
+                    sendJson(response, 404, {error: `Задача с ID ${taskId} не найдена`});
+                    return;
+                }
+
+                sendJson(response, 200, task);
+                return;
+            }
+
+            if (method === "PATCH") {
+                const taskId = Number(taskIdText);
+
+                if (!Number.isSafeInteger(taskId) || taskId <= 0) {
+                    sendJson(response, 400, {error: "ID должен быть положительным целым числом"});
+                    return;
+                }
+            
+                const contentType = request.headers["content-type"];
+                const mediaType = contentType
+                    ?.split(";")[0]
+                    ?.trim()
+                    .toLowerCase();
+
+                if (mediaType !== "application/json") {
+                    sendJson(response, 415, {error: "Content-Type должен быть application/json"});
+                    return;
+                }
+
+                let body: unknown;
+
+                try {
+                    body = await readJsonBody(request);
+                } catch (error: unknown) {
+                    if (error instanceof SyntaxError) {
+                        sendJson(response, 400, {error: "Некорректный JSON"});
+                        return;
+                    }
+
+                    throw error;
+                }
+
+                if (!isUpdateTaskBody(body)) {
+                    sendJson(response, 400, {error: "Тело запроса имеет неверную структуру"});
+                    return;
+                }
+
+                const tasks = await loadTasks();
+                const task = tasks.find(task => task.id === taskId);
+
+                if (task === undefined) {
+                    sendJson(response, 404, {error: `Задача с ID ${taskId} не найдена`});
+                    return;
+                }
+
+                if (body.title) {
+                    const normalizedTitle = body.title?.toLowerCase();
+                    const cleanedTitle = normalizedTitle?.trim();
+                    const hasConflict = tasks.some(task => task.id !== taskId && task.title.toLowerCase().trim() === cleanedTitle);
+
+                    if (hasConflict) {
+                        sendJson(response, 409, {error: "Задача с таким title уже существует"});
+                        return;
+                    }
+
+                    task.title = cleanedTitle;
+                }
+
+                if  (body.completed !== undefined) {
+                    task.completed = body.completed;
+                }
+
+                await saveTasks(tasks);
+                sendJson(response, 200, task);
+                return;
+            }
+
+            if (method === "DELETE") {
+                const taskId = Number(taskIdText);
+
+                if (!Number.isSafeInteger(taskId) || taskId <= 0) {
+                    sendJson(response, 400, {error: "ID должен быть положительным целым числом"});
+                    return;
+                }
+
+                const tasks = await loadTasks();
+                const task = tasks.find(task => task.id === taskId);
+
+                if (task === undefined) {
+                    sendJson(response, 404, {error: `Задача с ID ${taskId} не найдена`});
+                    return;
+                }
+
+                const updatedTasks = tasks.filter(task => task.id !== taskId);
+
+                await saveTasks(updatedTasks);
+
+                response.statusCode = 204;
+                response.end();
+                return;
+            }
+        }
 
         sendJson(response, 404, {error: "Not Found"});
     } catch (error: unknown) {
@@ -148,9 +256,36 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
     return JSON.parse(body) as unknown;
 }
 
+function getStatus(isCompleted: boolean): string {
+    return isCompleted ? "выполнено" : "выполняется";
+}
+
 function isCreateTaskBody(value: unknown): value is CreateTaskBody {
     return (typeof value === "object" && value !== null && "title" in value && typeof value.title === "string" && value.title.trim() !== "");
 }
+
+function isUpdateTaskBody(
+  value: unknown,
+): value is UpdateTaskBody {
+  if (typeof value !== "object" || value === null) return false;
+
+  const hasTitle = "title" in value;
+  const hasCompleted = "completed" in value;
+
+  if (!hasTitle && !hasCompleted) return false;
+  if (hasTitle && (typeof value.title !== "string" || value.title.trim() === ""))return false;
+  if (hasCompleted && typeof value.completed !== "boolean") return false;
+
+  return true;
+}
+
+function getTaskIdText(pathname: string):string | undefined {
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments.length !== 2 || segments[0] !== "tasks") return undefined;
+    
+    return segments[1];
+}
+
 
 server.listen(port, host, () => {
     console.log(`Сервер запущен: http://${host}:${port}`);
